@@ -1,0 +1,29 @@
+---
+- name: scan hosts and pull results
+  hosts: aws 
+  become: true
+  vars:
+    file: "oscap-{{ansible_hostname}}_{{ansible_date_time['date']}}"
+  vars_files:
+    - vars/scan-vars.yml
+
+  tasks: 
+    #- debug: var=ansible_distribution
+    - name: scan amzn hosts
+      register: result
+      shell: "cd ~; oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_stig-rhel7-disa --stig-viewer {{file}}.xml --report {{file}}.html /usr/share/xml/scap/ssg/content/ssg-amzn2-ds.xml"
+      when: ansible_distribution == "Amazon"
+      ignore_errors: true
+
+    - name: copy xml report to s3
+      shell: "cd ~; aws s3 cp {{file}}.xml s3://{{bucket}} --region {{bucket_region}}"
+      when: ansible_distribution == "Amazon"
+
+    - name: copy http report to s3
+      shell: "cd ~; aws s3 cp {{file}}.html s3://{{bucket}} --region {{bucket_region}}"
+      when: ansible_distribution == "Amazon"
+
+    - name: scan centos hosts
+      shell: "cd; oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_pci-dss --fetch-remote-resources --stig-viewer {{file}}.xml --report {{file}}.html /usr/share/xml/scap/ssg/content/ssg-centos8-ds-1.2.xml" 
+      when: ansible_distribution == "CentOS"
+...
