@@ -36,7 +36,7 @@
       when: ansible_distribution == "Amazon"
 
     - name: scan centos hosts
-      shell: "cd; oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_pci-dss --fetch-remote-resources --stig-viewer {{file}}.xml --report {{file}}.html /usr/share/xml/scap/ssg/content/ssg-centos7-ds-1.2.xml" 
+      shell: "cd; oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_standard --fetch-remote-resources --stig-viewer {{file}}.xml --report {{file}}.html /usr/share/xml/scap/ssg/content/ssg-centos7-ds-1.2.xml" 
       when: ansible_distribution == "CentOS"
 
     - name: copy http report to s3
