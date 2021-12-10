@@ -40,10 +40,11 @@
 
         - name: copy http report to s3
           shell: "cd ~; aws s3 cp {{file}}.xml s3://{{bucket2}} --region {{bucket_region}}"
-          when: reporthtml.stat.exists
+          when: reportxml.stat.exists
 
         - name: copy http report to s3
           shell: "cd ~; aws s3 cp {{file}}.html s3://{{bucket2}} --region {{bucket_region}}"
+          when: reporthtml.stat.exists
       when: ansible_distribution == "CentOS"
  
     - name: working with AL2 hosts
@@ -63,7 +64,9 @@
           register: reportxml 
         - name: copy xml report to s3
           shell: "cd ~; aws s3 cp {{file}}.xml s3://{{bucket}} --region {{bucket_region}}"
+          when: reportxml.stat.exists
         - name: copy http report to s3
           shell: "cd ~; aws s3 cp {{file}}.html s3://{{bucket}} --region {{bucket_region}}"
+          when: reporthtml.stat.exists
       when: ansible_distribution == "Amazon"
 ...
