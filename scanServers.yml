@@ -30,12 +30,12 @@
         
         - name: Check that the html report exists
           stat:
-            path: /home/root/{{file}}.html 
+            path: /root/{{file}}.html 
           register: reporthtml 
 
         - name: Check that the xml report file exists
           stat:
-            path: /home/root/{{file}}.xml 
+            path: /root/{{file}}.xml 
           register: reportxml 
 
         - name: copy http report to s3
@@ -56,11 +56,11 @@
           poll: 60 
         - name: Check that the html report file exists
           stat:
-            path: /home/root/{{file}}.html 
+            path: /root/{{file}}.html 
           register: reporthtml 
         - name: Check that the xml report file exists
           stat:
-            path: /home/root/{{file}}.xml 
+            path: /root/{{file}}.xml 
           register: reportxml 
         - name: copy xml report to s3
           shell: "cd ~; aws s3 cp {{file}}.xml s3://{{bucket}} --region {{bucket_region}}"
