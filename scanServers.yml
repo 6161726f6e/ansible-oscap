@@ -1,13 +1,12 @@
 ---
 - name: scan hosts and pull results
-  hosts: aws 
+  hosts: aws
   become: true
   vars:
     file: "oscap-{{ansible_hostname}}_{{ansible_date_time['date']}}"
   vars_files:
     - vars/scan-vars.yml
-
-  tasks: 
+  tasks:
     - name: install packages
       yum:
         name: 
@@ -15,31 +14,56 @@
           - scap-security-guide
         state: latest
 
-    - name: copy datastream file for CentOS7
-      copy:
-        src: files/ssg-centos7-ds-1.2.xml
-        dest: /usr/share/xml/scap/ssg/content/
-  
     #- debug: var=ansible_distribution
-    - name: scan amzn hosts
-      register: result
-      shell: "cd ~; oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_stig-rhel7-disa --stig-viewer {{file}}.xml --report {{file}}.html /usr/share/xml/scap/ssg/content/ssg-amzn2-ds.xml"
-      when: ansible_distribution == "Amazon"
-      ignore_errors: true
+    
+    - name: working with centos machines
+      block:
+        - name: copy datastream file for CentOS7
+          copy:
+            src: files/ssg-centos7-ds-1.2.xml
+            dest: /usr/share/xml/scap/ssg/content/
+        - name: scan centos hosts
+          shell: "cd; oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_standard --fetch-remote-resources --stig-viewer {{file}}.xml --report {{file}}.html /usr/share/xml/scap/ssg/content/ssg-centos7-ds-1.2.xml" 
+          ignore_errors: true
+          async: 3600 
+          poll: 60 
+        
+        - name: Check that the html report exists
+          stat:
+            path: /home/root/{{file}}.html 
+          register: reporthtml 
 
-    - name: copy xml report to s3
-      shell: "cd ~; aws s3 cp {{file}}.xml s3://{{bucket}} --region {{bucket_region}}"
-      when: ansible_distribution == "Amazon"
+        - name: Check that the xml report file exists
+          stat:
+            path: /home/root/{{file}}.xml 
+          register: reportxml 
 
-    - name: copy http report to s3
-      shell: "cd ~; aws s3 cp {{file}}.html s3://{{bucket}} --region {{bucket_region}}"
-      when: ansible_distribution == "Amazon"
+        - name: copy http report to s3
+          shell: "cd ~; aws s3 cp {{file}}.xml s3://{{bucket2}} --region {{bucket_region}}"
+          when: reporthtml.stat.exists
 
-    - name: scan centos hosts
-      shell: "cd; oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_standard --fetch-remote-resources --stig-viewer {{file}}.xml --report {{file}}.html /usr/share/xml/scap/ssg/content/ssg-centos7-ds-1.2.xml" 
+        - name: copy http report to s3
+          shell: "cd ~; aws s3 cp {{file}}.html s3://{{bucket2}} --region {{bucket_region}}"
       when: ansible_distribution == "CentOS"
-
-    - name: copy http report to s3
-      shell: "cd ~; aws s3 cp {{file}}.html s3://{{bucket2}} --region {{bucket_region}}"
-      when: ansible_distribution == "CentOS"
+ 
+    - name: working with AL2 hosts
+      block:
+        - name: scan amzn hosts
+          shell: "cd ~; oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_stig-rhel7-disa --stig-viewer {{file}}.xml --report {{file}}.html /usr/share/xml/scap/ssg/content/ssg-amzn2-ds.xml"
+          ignore_errors: true
+          async: 3600 
+          poll: 60 
+        - name: Check that the html report file exists
+          stat:
+            path: /home/root/{{file}}.html 
+          register: reporthtml 
+        - name: Check that the xml report file exists
+          stat:
+            path: /home/root/{{file}}.xml 
+          register: reportxml 
+        - name: copy xml report to s3
+          shell: "cd ~; aws s3 cp {{file}}.xml s3://{{bucket}} --region {{bucket_region}}"
+        - name: copy http report to s3
+          shell: "cd ~; aws s3 cp {{file}}.html s3://{{bucket}} --region {{bucket_region}}"
+      when: ansible_distribution == "Amazon"
 ...
